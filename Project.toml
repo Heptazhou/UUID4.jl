@@ -1,7 +1,7 @@
 name = "UUID4"
 uuid = "379725f3-1ad5-416d-b88a-50ced391fe04"
 authors = ["Heptazhou <zhou at 0h7z dot com>"]
-version = "1.7.0"
+version = "1.7.1"
 
 [deps]
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
