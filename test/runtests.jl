@@ -59,7 +59,7 @@ u = UUID(u_s[36])
 @test fmt == uuid_formats()
 for n in fmt
 	@test (n, u) == uuid_parse(u_s[n])
-	@test u_s[n] == uuid_string(u, n)
+	@test u_s[n] == uuid_string(u, n) == uuid_string(n, u)
 	@test n == uuid_parse(uuid_string(n))[1]
 end
 

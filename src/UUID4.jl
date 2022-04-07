@@ -84,27 +84,28 @@ end
 """
 function uuid_parse(str::String; fmt::Int = 0)::Tuple{Int, UUID}
 	len = length(str)
-	if 0 > fmt
+	r = if fmt < 0
 		error("Invalid format `$fmt` (should be positive)")
 	elseif len != fmt > 0
 		error("Invalid id `$str` with length = $len (should be $fmt)")
 	elseif len == 24
-		len, uuid_parse(replace.(str, "-" => ""), fmt = 22)[2]
+		uuid_parse(replace.(str, "-" => ""), fmt = 22)[2]
 	elseif len == 29
-		len, uuid_parse(replace.(str, "-" => ""), fmt = 25)[2]
+		uuid_parse(replace.(str, "-" => ""), fmt = 25)[2]
 	elseif len == 39
-		len, uuid_parse(replace.(str, "-" => ""), fmt = 32)[2]
+		uuid_parse(replace.(str, "-" => ""), fmt = 32)[2]
 	elseif len == 22
-		len, UUID(parse(UInt128, str, base = 62))
+		UUID(parse(UInt128, str, base = 62))
 	elseif len == 25
-		len, UUID(parse(UInt128, str, base = 36))
+		UUID(parse(UInt128, str, base = 36))
 	elseif len == 32
-		len, UUID(parse(UInt128, str, base = 16))
+		UUID(parse(UInt128, str, base = 16))
 	elseif len == 36
-		len, UUID(str)
+		UUID(str)
 	else
 		error("Invalid id `$str` with length = $len")
 	end
+	len, r
 end
 
 """
@@ -121,9 +122,6 @@ function uuid_string(id::UUID = uuid())::Dict{Int, String}
 	id29 = replace(id25, r"(.{5})" => s"\1-", count = 4)
 	id39 = replace(id32, r"(.{4})" => s"\1-", count = 7)
 	Dict(22 => id22, 24 => id24, 25 => id25, 29 => id29, 32 => id32, 36 => id36, 39 => id39)
-end
-function uuid_string(fmt::Int)::String
-	uuid_string(uuid(), fmt)
 end
 function uuid_string(id::UUID, fmt::Int)::String
 	if 0 ≥ fmt
@@ -145,6 +143,12 @@ function uuid_string(id::UUID, fmt::Int)::String
 	else
 		error("Invalid format `$fmt` (undefined)")
 	end
+end
+function uuid_string(fmt::Int)::String
+	uuid_string(uuid(), fmt)
+end
+function uuid_string(fmt::Int, id::UUID)::String
+	uuid_string(id, fmt)
 end
 
 """
