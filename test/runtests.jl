@@ -1,4 +1,4 @@
-# Copyright (C) 2022 Heptazhou <zhou@0h7z.com>
+# Copyright (C) 2022-2023 Heptazhou <zhou@0h7z.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -19,6 +19,7 @@ const uuid4 = uuid
 u4 = uuid4()
 @test 4 == uuid_version(u4)
 @test 4 == uuid_version(u4 |> string)
+@test 4 == uuid_version(u4 |> string |> GenericString)
 @test 4 == uuid_version(u4 |> string |> s -> replace(s, "-" => ""))
 @test u4 == UUID(string(u4)) == UUID(GenericString(string(u4)))
 @test u4 == UUID(UInt128(u4))
@@ -27,11 +28,11 @@ u4 = uuid4()
 @test_throws ArgumentError UUID("550e8400e29b-41d4-a716-44665544000098")
 @test_throws ArgumentError UUID("z50e8400-e29b-41d4-a716-446655440000")
 
-# JuliaLang/julia#35860
+# https://github.com/JuliaLang/julia/issues/35860
 Random.seed!(Random.GLOBAL_RNG, 10)
-u4 = uuid4()
+@sync u4 = uuid4()
 Random.seed!(Random.GLOBAL_RNG, 10)
-@test u4 != uuid4()
+@test u4 ≠ uuid4()
 
 @test_throws ArgumentError UUID("22b4a8a1ae548-4eeb-9270-60426d66a48e")
 @test_throws ArgumentError UUID("22b4a8a1-e548a4eeb-9270-60426d66a48e")
@@ -45,7 +46,7 @@ for r in rand(UInt128, 10^3)
 end
 
 fmt = [22, 24, 25, 29, 32, 36, 39]
-u_s = Dict(
+vec = [
 	fmt[1] => "50XjbNooVpOszESTWcsJDk",
 	fmt[2] => "50XjbNo-oVpOszE-STWcsJDk",
 	fmt[3] => "9qr1zsf8wf3fn8st1t5r8hh1s",
@@ -53,21 +54,24 @@ u_s = Dict(
 	fmt[5] => "a4929835c612495983c50ac8e9265490",
 	fmt[6] => "a4929835-c612-4959-83c5-0ac8e9265490",
 	fmt[7] => "a492-9835-c612-4959-83c5-0ac8-e926-5490",
-)
-u = UUID(u_s[36])
+]
+d_o = vec |> OrderedDict
+d_u = vec |> Dict
+u = UUID(d_u[36])
 
-@test fmt == uuid_formats()
+@test fmt == uuid_formats() == d_o.keys
 for n in fmt
-	@test (n, u) == uuid_parse(u_s[n])
-	@test u_s[n] == uuid_string(u, n) == uuid_string(n, u)
+	@test (n, u) == uuid_parse(d_u[n]) ≡ uuid_parse(d_u[n] |> GenericString)
+	@test d_u[n] == uuid_string(u, n) == uuid_string(n, u) == d_o[n]
 	@test n == uuid_parse(uuid_string(n))[1]
 end
 
-@test_throws ErrorException uuid_parse(u_s[32], fmt = -1)
-@test_throws ErrorException uuid_parse(u_s[32], fmt = 42)
-@test_throws ErrorException uuid_parse(u_s[32]^2)
+@test_throws ErrorException uuid_parse(d_u[32], fmt = -1)
+@test_throws ErrorException uuid_parse(d_u[32], fmt = 42)
+@test_throws ErrorException uuid_parse(d_u[32]^2)
 
-@test u_s == uuid_string(u)
+@test uuid_string(u, OrderedDict) == uuid_string(OrderedDict, u)
+@test uuid_string(u) == d_u == uuid_string(Dict, u)
 @test_throws ErrorException uuid_string(u, -1)
 @test_throws ErrorException uuid_string(u, 42)
 
