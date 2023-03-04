@@ -26,6 +26,7 @@ export uuid_formats
 export uuid_parse
 export uuid_string
 export uuid_version
+export uuid4
 
 export AbstractRNG, MersenneTwister, RandomDevice
 export LittleDict, OrderedDict
@@ -54,6 +55,7 @@ function uuid(rng::AbstractRNG = RandomDevice())::UUID
 	id |= 0x00000000000040008000000000000000
 	id |> UUID
 end
+const uuid4 = uuid
 
 """
 	uuid_formats() -> Vector{Int}
@@ -78,6 +80,9 @@ end
 	uuid_parse(str::String; fmt::Int = length(str)) -> Tuple{Int, UUID}
 """
 function uuid_parse end
+function uuid_parse(str::UUID; fmt::Any = 0x0)::Tuple{Int, UUID}
+	uuid_parse(string(str); fmt = Int(fmt))
+end
 function uuid_parse(str::Any; fmt::Number = 0)::Tuple{Int, UUID}
 	uuid_parse(String(str); fmt = Int(fmt))
 end
@@ -88,11 +93,11 @@ function uuid_parse(str::String; fmt::Int = 0)::Tuple{Int, UUID}
 	elseif len ≠ fmt > 0
 		error("Invalid id `$str` with length = $len (should be $fmt)")
 	elseif len ≡ 24
-		uuid_parse(replace((str), "-" => ""), fmt = 22)[2]
+		uuid_parse(replace((str), "-" => ""), fmt = 22)[end]
 	elseif len ≡ 29
-		uuid_parse(replace((str), "-" => ""), fmt = 25)[2]
+		uuid_parse(replace((str), "-" => ""), fmt = 25)[end]
 	elseif len ≡ 39
-		uuid_parse(replace((str), "-" => ""), fmt = 32)[2]
+		uuid_parse(replace((str), "-" => ""), fmt = 32)[end]
 	elseif len ≡ 22
 		UUID(parse(UInt128, str, base = 62))
 	elseif len ≡ 25
@@ -108,11 +113,30 @@ function uuid_parse(str::String; fmt::Int = 0)::Tuple{Int, UUID}
 end
 
 """
-	uuid_string(id::UUID = uuid(), T) -> T{Int, String} where T <: AbstractDict
 	uuid_string(id::UUID = uuid()) -> Dict{Int, String}
+	uuid_string(id::UUID = uuid(), T) -> T{Int, String} where T <: AbstractDict
 	uuid_string(id::UUID = uuid(), fmt::Int) -> String
+
+# Examples
+```jldoctest
+julia> uuid_string(OrderedDict, "123e4567-e89b-12d3-a456-426614174000")
+OrderedDict{Int64, String} with 7 entries:
+  22 => "0YQJpYwUwvbaLOwTUr4thA"
+  24 => "0YQJpYw-UwvbaLO-wTUr4thA"
+  25 => "12vqjrnxk8whv3i8qi6qgrlz4"
+  29 => "12vqj-rnxk8-whv3i-8qi6q-grlz4"
+  32 => "123e4567e89b12d3a456426614174000"
+  36 => "123e4567-e89b-12d3-a456-426614174000"
+  39 => "123e-4567-e89b-12d3-a456-4266-1417-4000"
+```
 """
 function uuid_string end
+function uuid_string(::Type{T}, id::Any) where T <: AbstractDict
+	uuid_string(uuid_parse(id)[end], T)
+end
+function uuid_string(id::Any, ::Type{T} = Dict) where T <: AbstractDict
+	uuid_string(uuid_parse(id)[end], T)
+end
 function uuid_string(::Type{T}, id::UUID = uuid()) where T <: AbstractDict
 	uuid_string(id, T)
 end
@@ -125,6 +149,15 @@ function uuid_string(id::UUID = uuid(), ::Type{T} = Dict) where T <: AbstractDic
 	id29 = replace(id25, r"(.{5})" => s"\1-", count = 4)
 	id39 = replace(id32, r"(.{4})" => s"\1-", count = 7)
 	T(22 => id22, 24 => id24, 25 => id25, 29 => id29, 32 => id32, 36 => id36, 39 => id39)
+end
+function uuid_string(fmt::Number, id::Any)::String
+	uuid_string(uuid_parse(id)[end], Int(fmt))
+end
+function uuid_string(id::Any, fmt::Number)::String
+	uuid_string(uuid_parse(id)[end], Int(fmt))
+end
+function uuid_string(fmt::Int, id::UUID = uuid())::String
+	uuid_string(id, fmt)
 end
 function uuid_string(id::UUID, fmt::Int)::String
 	if 0 ≥ fmt
@@ -147,15 +180,12 @@ function uuid_string(id::UUID, fmt::Int)::String
 		error("Invalid format `$fmt` (undefined)")
 	end
 end
-function uuid_string(fmt::Int, id::UUID = uuid())::String
-	uuid_string(id, fmt)
-end
 
 """
 	uuid_version(id::String) -> Int
 	uuid_version(id::UUID)   -> Int
 
-Inspect the given UUID and return its version (see [RFC
+Inspect the given UUID or UUID string and return its version (see [RFC
 4122](https://www.ietf.org/rfc/rfc4122)).
 
 # Examples
@@ -166,7 +196,7 @@ julia> uuid_version(uuid())
 """
 function uuid_version end
 uuid_version(id::Any)::Int    = uuid_version(String(id))
-uuid_version(id::String)::Int = uuid_version(uuid_parse(id)[2])
+uuid_version(id::String)::Int = uuid_version(uuid_parse(id)[end])
 uuid_version(id::UUID)::Int   = Int(id.value >> 76 & 0xf)
 
 end # module

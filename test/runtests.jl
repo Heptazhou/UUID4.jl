@@ -14,7 +14,6 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using Random, Test, UUID4
-const uuid4 = uuid
 
 u4 = uuid4()
 @test 4 == uuid_version(u4)
@@ -58,11 +57,14 @@ vec = [
 d_o = vec |> OrderedDict
 d_u = vec |> Dict
 u = UUID(d_u[36])
+s = string(u) |> GenericString
 
-@test fmt == uuid_formats() == d_o.keys
+@test uuid_parse(s) == uuid_parse(u) == (36, u)
+@test uuid_formats() == d_o.keys == fmt
 for n in fmt
-	@test (n, u) == uuid_parse(d_u[n]) ≡ uuid_parse(d_u[n] |> GenericString)
-	@test d_u[n] == uuid_string(u, n) == uuid_string(n, u) == d_o[n]
+	@test (n, u) == uuid_parse(d_u[n]) == uuid_parse(d_u[n] |> GenericString)
+	@test d_u[n] == uuid_string(n, u) == uuid_string(u, n |> UInt32) == d_o[n]
+	@test d_o[n] == uuid_string(n, u |> string) == uuid_string(u |> string, n)
 	@test n == uuid_parse(uuid_string(n))[1]
 end
 
@@ -71,7 +73,8 @@ end
 @test_throws ErrorException uuid_parse(d_u[32]^2)
 
 @test uuid_string(u, OrderedDict) == uuid_string(OrderedDict, u)
-@test uuid_string(u) == d_u == uuid_string(Dict, u)
+@test uuid_string(u) == uuid_string(Dict, u) == d_u == Dict(d_o)
+@test uuid_string(u) == uuid_string(Dict, s) == uuid_string(s, Dict)
 @test_throws ErrorException uuid_string(u, -1)
 @test_throws ErrorException uuid_string(u, 42)
 
