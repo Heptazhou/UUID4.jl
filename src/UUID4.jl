@@ -21,12 +21,11 @@ along with related functions.
 """
 module UUID4
 
-export uuid
+export uuid, uuid4
 export uuid_formats
 export uuid_parse
 export uuid_string
 export uuid_version
-export uuid4
 
 export AbstractRNG, MersenneTwister, RandomDevice
 export LittleDict, OrderedDict
@@ -65,14 +64,14 @@ Return all supported UUID string formats.
 function uuid_formats()::Vector{Int}
 	[
 		# case-sensitive
-		22 # 22
-		24 # 7-7-8
-		# non-case-sensitive
-		25 # 25
-		29 # 5-5-5-5-5
-		32 # 32
-		36 # 8-4-4-4-12
-		39 # 4-4-4-4-4-4-4-4
+		22 # (base62) 22
+		24 # (base62) 7-7-8
+		# case-insensitive
+		25 # (base36) 25
+		29 # (base36) 5-5-5-5-5
+		32 # (base16) 32
+		36 # (base16) 8-4-4-4-12
+		39 # (base16) 4-4-4-4-4-4-4-4
 	]
 end
 
@@ -89,9 +88,9 @@ end
 function uuid_parse(str::String; fmt::Int = 0)::Tuple{Int, UUID}
 	len = length(str)
 	ret = if 0 > fmt
-		error("Invalid format `$fmt` (should be positive)")
+		argumenterror("Invalid format `$fmt` (should be positive)")
 	elseif len ≠ fmt > 0
-		error("Invalid id `$str` with length = $len (should be $fmt)")
+		argumenterror("Invalid id `$str` with length = $len (should be $fmt)")
 	elseif len ≡ 24
 		uuid_parse(replace((str), "-" => ""), fmt = 22)[end]
 	elseif len ≡ 29
@@ -107,7 +106,7 @@ function uuid_parse(str::String; fmt::Int = 0)::Tuple{Int, UUID}
 	elseif len ≡ 36
 		UUID(str)
 	else
-		error("Invalid id `$str` with length = $len")
+		argumenterror("Invalid id `$str` with length = $len")
 	end
 	len, ret
 end
@@ -161,7 +160,7 @@ function uuid_string(fmt::Int, id::UUID = uuid())::String
 end
 function uuid_string(id::UUID, fmt::Int)::String
 	if 0 ≥ fmt
-		error("Invalid format `$fmt` (should be positive)")
+		argumenterror("Invalid format `$fmt` (should be positive)")
 	elseif fmt ≡ 36
 		string(id)
 	elseif fmt ≡ 22
@@ -177,7 +176,7 @@ function uuid_string(id::UUID, fmt::Int)::String
 	elseif fmt ≡ 39
 		replace(uuid_string(id, 32), r"(.{4})" => s"\1-", count = fmt - 32)
 	else
-		error("Invalid format `$fmt` (undefined)")
+		argumenterror("Invalid format `$fmt` (undefined)")
 	end
 end
 
@@ -198,6 +197,8 @@ function uuid_version end
 uuid_version(id::Any)::Int    = uuid_version(String(id))
 uuid_version(id::String)::Int = uuid_version(uuid_parse(id)[end])
 uuid_version(id::UUID)::Int   = Int(id.value >> 76 & 0xf)
+
+@noinline argumenterror(msg::AbstractString) = throw(ArgumentError(msg))
 
 end # module
 

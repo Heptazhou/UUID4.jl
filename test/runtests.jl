@@ -13,7 +13,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-using Random, Test, UUID4
+using Random: Random
+using Test, UUID4
 
 u4 = uuid4()
 @test 4 == uuid_version(u4)
@@ -33,31 +34,29 @@ Random.seed!(Random.GLOBAL_RNG, 10)
 Random.seed!(Random.GLOBAL_RNG, 10)
 @test u4 ≠ uuid4()
 
+str = "22b4a8a1-e548-4eeb-9270-60426d66a48e"
 @test_throws ArgumentError UUID("22b4a8a1ae548-4eeb-9270-60426d66a48e")
 @test_throws ArgumentError UUID("22b4a8a1-e548a4eeb-9270-60426d66a48e")
 @test_throws ArgumentError UUID("22b4a8a1-e548-4eeba9270-60426d66a48e")
 @test_throws ArgumentError UUID("22b4a8a1-e548-4eeb-9270a60426d66a48e")
-str = "22b4a8a1-e548-4eeb-9270-60426d66a48e"
 @test UUID(uppercase(str)) == UUID(str)
-
-for r in rand(UInt128, 10^3)
+for r in (rand(UInt128, 10^3))
 	@test UUID(r) == UUID(string(UUID(r)))
 end
 
 fmt = [22, 24, 25, 29, 32, 36, 39]
 vec = [
-	fmt[1] => "50XjbNooVpOszESTWcsJDk",
-	fmt[2] => "50XjbNo-oVpOszE-STWcsJDk",
-	fmt[3] => "9qr1zsf8wf3fn8st1t5r8hh1s",
-	fmt[4] => "9qr1z-sf8wf-3fn8s-t1t5r-8hh1s",
-	fmt[5] => "a4929835c612495983c50ac8e9265490",
-	fmt[6] => "a4929835-c612-4959-83c5-0ac8e9265490",
-	fmt[7] => "a492-9835-c612-4959-83c5-0ac8-e926-5490",
+	fmt[1] => "50XjbNooVpOszESTWcsJDk"
+	fmt[2] => "50XjbNo-oVpOszE-STWcsJDk"
+	fmt[3] => "9qr1zsf8wf3fn8st1t5r8hh1s"
+	fmt[4] => "9qr1z-sf8wf-3fn8s-t1t5r-8hh1s"
+	fmt[5] => "a4929835c612495983c50ac8e9265490"
+	fmt[6] => "a4929835-c612-4959-83c5-0ac8e9265490"
+	fmt[7] => "a492-9835-c612-4959-83c5-0ac8-e926-5490"
 ]
-d_o = vec |> OrderedDict
-d_u = vec |> Dict
+d_o, d_u = OrderedDict(vec), Dict(vec)
 u = UUID(d_u[36])
-s = string(u) |> GenericString
+s = GenericString(string(u))
 
 @test uuid_parse(s) == uuid_parse(u) == (36, u)
 @test uuid_formats() == d_o.keys == fmt
@@ -68,13 +67,13 @@ for n in fmt
 	@test n == uuid_parse(uuid_string(n))[1]
 end
 
-@test_throws ErrorException uuid_parse(d_u[32], fmt = -1)
-@test_throws ErrorException uuid_parse(d_u[32], fmt = 42)
-@test_throws ErrorException uuid_parse(d_u[32]^2)
+@test_throws ArgumentError uuid_parse(d_u[32], fmt = -1)
+@test_throws ArgumentError uuid_parse(d_u[32], fmt = 42)
+@test_throws ArgumentError uuid_parse(d_u[32]^2)
 
 @test uuid_string(u, OrderedDict) == uuid_string(OrderedDict, u)
 @test uuid_string(u) == uuid_string(Dict, u) == d_u == Dict(d_o)
 @test uuid_string(u) == uuid_string(Dict, s) == uuid_string(s, Dict)
-@test_throws ErrorException uuid_string(u, -1)
-@test_throws ErrorException uuid_string(u, 42)
+@test_throws ArgumentError uuid_string(u, -1)
+@test_throws ArgumentError uuid_string(u, 42)
 
